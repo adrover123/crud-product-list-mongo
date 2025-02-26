@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product CRUD</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f9;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    .product-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .product-card {
+      background-color: #fff;
+      border: 1px solid #ddd;
+      padding: 20px;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      width: calc(33.333% - 20px);
+      text-align: center;
+    }
+    .product-card img {
+      max-width: 100%;
+      height: 200px;
+      object-fit: cover;
+      margin-bottom: 10px;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .form-container {
+      margin-top: 20px;
+    }
+    .form-container input, .form-container button {
+      padding: 10px;
+      margin: 5px 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .notification {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background-color: #4CAF50;
+      color: white;
+      padding: 15px;
+      border-radius: 5px;
+      display: none;
+      z-index: 1000;
+    }
+    .notification.error {
+      background-color: #f44336;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Product CRUD Operations</h1>
+    <div class="notification" id="notification"></div>
+
+    <div class="form-container">
+      <h2>Add Product</h2>
+      <input type="text" id="name" placeholder="Product Name">
+      <input type="text" id="description" placeholder="Product Description">
+      <input type="number" id="price" placeholder="Product Price">
+      <button id="add-product-btn">Add Product</button>
+    </div>
+
+    <h2>Product List</h2>
+    <div class="product-list" id="product-list">
+      <!-- Product Cards will appear here -->
+    </div>
+  </div>
+
+  <script>
+    const apiUrl = 'http://localhost:3000/products';
+    const productList = document.getElementById('product-list');
+    const addProductBtn = document.getElementById('add-product-btn');
+    const notification = document.getElementById('notification');
+
+    function showNotification(message, isError = false) {
+      notification.textContent = message;
+      notification.classList.remove('error');
+      if (isError) notification.classList.add('error');
+      notification.style.display = 'block';
+      setTimeout(() => {
+        notification.style.display = 'none';
+      }, 3000);
+    }
+
+    async function fetchProducts() {
+      try {
+        const response = await fetch(apiUrl);
+        const products = await response.json();
+        
+        if (!response.ok) {
+          console.error('Error response:', products);
+          showNotification('Error fetching products', true);
+          return;
+        }
+
+        productList.innerHTML = '';
+        if (products.length === 0) {
+          productList.innerHTML = '<p>No products available</p>';
+          return;
+        }
+
+        products.forEach(product => {
+          productList.innerHTML += `
+            <div class="product-card" id="product-${product._id}">
+              <img src="${product.image || 'https://via.placeholder.com/200'}" alt="${product.name}">
+              <h3>${product.name}</h3>
+              <p>${product.description}</p>
+              <p><strong>$${parseFloat(product.price).toFixed(2)}</strong></p>
+              <button onclick="deleteProduct('${product._id}')">Delete</button>
+              <button onclick="editProduct('${product._id}')">Edit</button>
+            </div>
+          `;
+        });
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        showNotification('Error fetching products', true);
+      }
+    }
+
+    async function addProduct() {
+      const name = document.getElementById('name').value.trim();
+      const description = document.getElementById('description').value.trim();
+      const price = document.getElementById('price').value.trim();
+
+      if (!name || !description || !price) {
+        showNotification('Please fill all fields!', true);
+        return;
+      }
+
+      const productData = { name, description, price };
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(productData),
+        });
+
+        if (response.ok) {
+          fetchProducts();
+          showNotification('Product added successfully!');
+          document.getElementById('name').value = '';
+          document.getElementById('description').value = '';
+          document.getElementById('price').value = '';
+        } else {
+          const errorResponse = await response.json();
+          console.error('Error response:', errorResponse);
+          showNotification(errorResponse.message || 'Failed to add product', true);
+        }
+      } catch (error) {
+        console.error('Error adding product:', error);
+        showNotification('Error adding product', true);
+      }
+    }
+
+    async function deleteProduct(productId) {
+      try {
+        const response = await fetch(`${apiUrl}/${productId}`, { method: 'DELETE' });
+
+        if (response.ok) {
+          document.getElementById(`product-${productId}`).remove();
+          showNotification('Product deleted successfully!');
+        } else {
+          showNotification('Failed to delete product', true);
+        }
+      } catch (error) {
+        console.error('Error deleting product:', error);
+        showNotification('Error deleting product', true);
+      }
+    }
+
+    async function editProduct(productId) {
+      alert(`Edit product with ID: ${productId}`);
+      // You can implement an update form here
+    }
+
+    addProductBtn.addEventListener('click', addProduct);
+    fetchProducts();
+  </script>
+</body>
+</html>
